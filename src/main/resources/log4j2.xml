@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Configuration status="OFF" monitorInterval="30">
+    <Properties>
+        <Property name="LOG_HOME">./logs/</Property>
+        <property name="APP_NAME">log4j2-kafka-demo</property>
+        <Property name="CONSOLE_PATTERN">[%d{HH:mm:ss.SSS}] [%-5p] [%F:%M] %msg%rEx%n</Property>
+        <Property name="PATTERN_LAYOUT">[%d] [%-5p] [%F:%M] %msg%rEx%n</Property>
+    </Properties>
+    <Appenders>
+        <Console name="console" target="SYSTEM_OUT">
+            <PatternLayout>
+                <charset>UTF-8</charset>
+                <Pattern>${CONSOLE_PATTERN}</Pattern>
+            </PatternLayout>
+        </Console>
+        <RollingFile name="info" fileName="${LOG_HOME}/${APP_NAME}.log"
+                     filePattern="${LOG_HOME}/${APP_NAME}-%d{yyyy-MM-dd}_%i.log.gz">
+            <ThresholdFilter level="INFO" onMatch="ACCEPT" onMismatch="DENY"/>
+            <PatternLayout>
+                <charset>UTF-8</charset>
+                <Pattern>${PATTERN_LAYOUT}</Pattern>
+            </PatternLayout>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="100MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="10"/>
+        </RollingFile>
+        <Kafka name="kafka" topic="log4j-kafka-demo" syncSend="false" ignoreExceptions="false">
+            <Property name="bootstrap.servers">10.211.55.21:9092</Property>
+            <Property name="value.serializer">com.example.demo.log.KafkaJsonSerializer</Property>
+            <Property name="compression.type">gzip</Property>
+            <Property name="max.block.ms">2000</Property>
+            <Property name="batch.size">16384</Property>
+            <Property name="linger.ms">500</Property>
+            <Property name="retries">1</Property>
+            <Property name="request.timeout.ms">5000</Property>
+            <PatternLayout pattern="${PATTERN_LAYOUT}"/>
+        </Kafka>
+        <Failover name="failover" primary="kafka" retryIntervalSeconds="180">
+            <Failovers>
+                <AppenderRef ref="info"/>
+            </Failovers>
+        </Failover>
+    </Appenders>
+    <Loggers>
+        <AsyncLogger name="com.example" level="TRACE" additivity="false">
+            <AppenderRef ref="failover"/>
+        </AsyncLogger>
+
+        <Root level="INFO">
+            <AppenderRef ref="console"/>
+            <AppenderRef ref="info"/>
+        </Root>
+    </Loggers>
+</Configuration>
